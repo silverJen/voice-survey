@@ -19,6 +19,11 @@
      transition:transform .12s ease-out, box-shadow .4s ease, opacity .6s ease;
      box-shadow:0 0 50px rgba(120,130,245,.45); }
   .orb.speaking { animation:breathe 2.2s ease-in-out infinite; }
+  .orb.thinking { animation:think 1.1s ease-in-out infinite; }
+  @keyframes think {
+    0%,100% { transform:scale(1); opacity:1; }
+    50%     { transform:scale(.95); opacity:.75; }
+  }
   @keyframes breathe {
     0%,100% { box-shadow:0 0 40px rgba(120,130,245,.4); transform:scale(1); }
     50%     { box-shadow:0 0 85px rgba(120,130,245,.75); transform:scale(1.06); }
@@ -69,7 +74,7 @@ function show(stage) {
 function setMode(mode) {
   myMode = mode;
   $("orb").classList.toggle("speaking", mode === "speaking");
-  if (mode === "speaking") $("orb").style.transform = "";
+  if (mode === "speaking") { $("orb").style.transform = ""; $("orb").classList.remove("thinking"); }
 }
 
 // 내 STT: 박스 없이 하단에 떴다가 사라짐
@@ -123,19 +128,27 @@ async function start() {
   show("callStage");
   setMode("listening");
   try {
-    conv = await Conversation.startSession({
+    const wantRtc = new URLSearchParams(location.search).get("rtc") !== "0";
+    const opts = (ct) => ({
       agentId: AGENT_ID,
-      connectionType: "websocket",
+      connectionType: ct,
       dynamicVariables: { uid },
       onModeChange: ({ mode }) => setMode(mode),
       onMessage: ({ source, message }) => {
         console.log("[EVT]", source, message);
-        if (source === "ai") { $("aiCaption").textContent = message; hideStt(); }
-        else if (source === "user") showStt(message, true);
+        if (source === "ai") { $("aiCaption").textContent = message; hideStt(); $("orb").classList.remove("thinking"); }
+        else if (source === "user") { showStt(message, true); $("orb").classList.add("thinking"); $("orb").style.transform = ""; }
       },
       onDisconnect: () => finish(),
       onError: (m) => console.warn("conv error:", m),
     });
+    try {
+      conv = await Conversation.startSession(opts(wantRtc ? "webrtc" : "websocket"));
+      console.log("[CONN]", wantRtc ? "webrtc" : "websocket");
+    } catch (e) {
+      console.log("[CONN] webrtc failed, fallback websocket", e?.message || e);
+      conv = await Conversation.startSession(opts("websocket"));
+    }
     startMeter();
     startLiveStt();
   } catch (e) {
