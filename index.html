@@ -3,125 +3,98 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>채널카페 음성 주문 설문</title>
+<title>채널카페 보이스 설문</title>
 <meta name="robots" content="noindex">
 <style>
-  :root { --brand:#5b5bd6; --brand2:#8b8bf0; --bg:#f7f7fb; --text:#1a1a2e; --sub:#6b6b80; }
   * { margin:0; padding:0; box-sizing:border-box; }
+  html, body { height:100%; }
   body { font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Pretendard",sans-serif;
-         background:var(--bg); color:var(--text); min-height:100dvh;
-         display:flex; flex-direction:column; align-items:center; padding:24px 20px; }
-  .card { width:100%; max-width:420px; display:flex; flex-direction:column; min-height:calc(100dvh - 48px); }
-  h1 { font-size:22px; line-height:1.35; margin:20px 0 12px; }
-  p.desc { font-size:15px; line-height:1.6; color:var(--sub); }
-  ul.steps { list-style:none; margin:20px 0 8px; }
-  ul.steps li { font-size:14.5px; line-height:1.5; padding:9px 0 9px 34px; position:relative; }
-  ul.steps li::before { content:attr(data-n); position:absolute; left:0; top:7px; width:24px; height:24px;
-     border-radius:50%; background:var(--brand); color:#fff; font-size:12.5px; font-weight:700;
-     display:flex; align-items:center; justify-content:center; }
-  .hint { font-size:13px; color:var(--sub); background:#ececf6; border-radius:10px; padding:12px 14px; line-height:1.55; margin:10px 0 20px; }
-
-  .stage { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:22px; }
+         background:#0d0d11; color:#fff; overflow:hidden; }
+  .stage { position:fixed; inset:0; display:flex; flex-direction:column;
+           align-items:center; justify-content:center; gap:28px; padding:24px; }
   .hidden { display:none !important; }
 
-  #startBtn { width:100%; max-width:320px; padding:20px 24px; border:none; border-radius:18px;
-     background:var(--brand); color:#fff; font-size:18px; font-weight:700; cursor:pointer;
-     box-shadow:0 6px 20px rgba(91,91,214,.35); }
-  #startBtn:active { transform:scale(.98); }
+  .orb { width:170px; height:170px; border-radius:50%; cursor:pointer; border:none; flex-shrink:0;
+     background:radial-gradient(circle at 35% 30%, #cfd6ff, #7b87f5 55%, #4a56d8);
+     transition:transform .12s ease-out, box-shadow .4s ease, opacity .6s ease;
+     box-shadow:0 0 60px rgba(120,130,245,.35); }
+  .orb.speaking { animation:breathe 2.2s ease-in-out infinite; }
+  @keyframes breathe {
+    0%,100% { box-shadow:0 0 50px rgba(120,130,245,.35); transform:scale(1); }
+    50%     { box-shadow:0 0 95px rgba(140,150,255,.65); transform:scale(1.06); }
+  }
 
-  .orb { width:140px; height:140px; border-radius:50%;
-     background:radial-gradient(circle at 35% 30%, var(--brand2), var(--brand));
-     display:flex; align-items:center; justify-content:center; font-size:52px; color:#fff;
-     transition:transform .25s ease, box-shadow .25s ease; }
-  .orb.listening { animation:pulse 1.6s ease-in-out infinite; box-shadow:0 0 0 14px rgba(91,91,214,.12); }
-  .orb.speaking  { animation:none; box-shadow:0 0 0 8px rgba(91,91,214,.18); transform:scale(1.05); }
-  @keyframes pulse { 0%,100%{box-shadow:0 0 0 8px rgba(91,91,214,.10)} 50%{box-shadow:0 0 0 22px rgba(91,91,214,.04)} }
-
-  #status { font-size:17px; font-weight:700; }
-  #caption { font-size:14.5px; line-height:1.6; color:var(--sub); text-align:center; min-height:44px; max-width:340px; }
-  #userSaid { min-height:40px; max-width:340px; text-align:center; }
-  #userSaid .bubble { display:inline-block; background:var(--text); color:#fff; border-radius:14px;
-     padding:8px 14px; font-size:14.5px; line-height:1.5; }
-  #userSaid .label { display:block; font-size:11.5px; color:var(--sub); margin-bottom:4px; }
-  #userSaid .bubble { transition:opacity .5s ease; }
-  #userSaid.stale .bubble { opacity:.25; }
-
-  .meter { display:flex; gap:5px; align-items:flex-end; height:34px; }
-  .meter span { width:7px; height:6px; border-radius:4px; background:var(--brand); opacity:.35; transition:height .09s linear; }
-  .meter-label { font-size:12px; color:var(--sub); margin-top:2px; }
-
-  #endBtn { margin-top:6px; padding:12px 28px; border:1.5px solid #d4d4e2; border-radius:12px;
-     background:#fff; color:var(--sub); font-size:14.5px; cursor:pointer; }
-  .done-emoji { font-size:56px; }
-  #errBox { font-size:13.5px; color:#c0392b; background:#fdeaea; border-radius:10px; padding:12px 14px; line-height:1.55; }
-  footer { padding-top:20px; font-size:12px; color:#a0a0b2; text-align:center; }
+  #tapHint { font-size:15px; color:rgba(255,255,255,.5); }
+  #aiCaption { font-size:16px; line-height:1.6; color:rgba(255,255,255,.55);
+     text-align:center; max-width:340px; min-height:52px; }
+  #sttText { position:fixed; left:24px; right:24px; bottom:max(48px, env(safe-area-inset-bottom, 48px));
+     text-align:center; font-size:19px; line-height:1.55; font-weight:600; color:#fff;
+     opacity:0; transition:opacity .35s ease; }
+  #sttText.show { opacity:1; }
+  #errText { font-size:14px; color:#ff8a80; text-align:center; max-width:320px; line-height:1.5; }
+  #doneText { font-size:20px; font-weight:600; text-align:center; line-height:1.7; }
 </style>
 </head>
 <body>
-<div class="card">
-  <!-- 시작 화면 -->
-  <div id="intro">
-    <h1>채널카페 음성 주문,<br>요즘 어떠세요? 🎙️</h1>
-    <p class="desc">채널카페 AI 전화 주문 경험에 대해 AI 상담원이 음성으로 딱 세 가지만 여쭤봅니다. 90초면 끝나요.</p>
-    <ul class="steps">
-      <li data-n="1">아래 버튼을 누르고 마이크 권한을 <b>허용</b></li>
-      <li data-n="2">AI 질문이 들리면 <b>말로 답하기</b></li>
-      <li data-n="3">질문 3개, 약 90초면 끝!</li>
-    </ul>
-    <div class="hint">🔊 소리가 나오니 통화 가능한 환경에서 참여해 주세요. 답변은 채널카페 음성 주문 개선에만 사용됩니다.</div>
-  </div>
   <div id="introStage" class="stage">
-    <button id="startBtn">🎤 설문 시작하기</button>
-    <div id="errBox" class="hidden"></div>
+    <button id="orbStart" class="orb" aria-label="설문 시작"></button>
+    <div id="tapHint">탭해서 시작</div>
+    <div id="errText" class="hidden"></div>
   </div>
 
-  <!-- 통화 화면 -->
   <div id="callStage" class="stage hidden">
-    <div id="orb" class="orb">🎙️</div>
-    <div id="status">연결 중…</div>
-    <div id="caption"></div>
-    <div id="userSaid"><span class="label">내 말이 이렇게 인식되고 있어요</span><span class="bubble" style="opacity:.45">듣고 있어요</span></div>
-    <div>
-      <div class="meter" id="meter"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
-      <div class="meter-label">내 목소리 인식 레벨</div>
-    </div>
-    <button id="endBtn">설문 그만하기</button>
+    <div id="orb" class="orb"></div>
+    <div id="aiCaption"></div>
   </div>
 
-  <!-- 완료 화면 -->
   <div id="doneStage" class="stage hidden">
-    <div class="done-emoji">🙏</div>
-    <div id="status2" style="font-size:18px;font-weight:700;">설문이 끝났어요. 감사합니다!</div>
-    <p class="desc" style="text-align:center;">남겨주신 의견은 채널카페 음성 주문 개선에 소중히 반영됩니다.<br>이제 창을 닫으셔도 됩니다.</p>
+    <div id="doneText">감사합니다 🙏</div>
   </div>
 
-  <footer>Channel Cafe · Voice Order Survey</footer>
-</div>
+  <div id="sttText"></div>
 
 <script type="module">
 import { Conversation } from "https://cdn.jsdelivr.net/npm/@elevenlabs/client/+esm";
 
 const AGENT_ID = "agent_2301m0v1b7ghftjbvhw27j7fph3e";
 const rid = new URLSearchParams(location.search).get("rid") || "direct";
-
 const $ = (id) => document.getElementById(id);
-const bars = [...document.querySelectorAll("#meter span")];
-let conv = null, meterTimer = null, gotAnyAudio = false;
-let speakingTicks = 0, sttPending = false, myMode = "listening";
 
-function clearUserBubble() {
-  const b = $("userSaid").querySelector(".bubble");
-  b.style.opacity = ".45"; b.textContent = "듣고 있어요";
-  sttPending = false; speakingTicks = 0;
-}
-function showUserText(text, interim) {
-  const el = $("userSaid"), b = el.querySelector(".bubble");
-  el.classList.remove("stale");
-  b.style.opacity = interim ? ".75" : "1";
-  b.textContent = text;
+let conv = null, meterTimer = null, sttFadeTimer = null, myMode = "listening";
+
+function show(stage) {
+  ["introStage","callStage","doneStage"].forEach(s => $(s).classList.toggle("hidden", s!==stage));
 }
 
-// 서버 최종 인식 전에 브라우저 자체 음성인식으로 실시간 표시 (지원 브라우저에서만)
+function setMode(mode) {
+  myMode = mode;
+  $("orb").classList.toggle("speaking", mode === "speaking");
+  if (mode === "speaking") $("orb").style.transform = "";
+}
+
+// 내 STT: 박스 없이 하단에 떴다가 사라짐
+function showStt(text, final) {
+  clearTimeout(sttFadeTimer);
+  const el = $("sttText");
+  el.textContent = text;
+  el.classList.add("show");
+  if (final) sttFadeTimer = setTimeout(() => el.classList.remove("show"), 2000);
+}
+function hideStt() {
+  clearTimeout(sttFadeTimer);
+  $("sttText").classList.remove("show");
+}
+
+// 듣는 중엔 목소리 크기에 따라 오브가 반응
+function startMeter() {
+  meterTimer = setInterval(() => {
+    if (!conv || myMode !== "listening") return;
+    let v = 0; try { v = conv.getInputVolume(); } catch(_){}
+    $("orb").style.transform = `scale(${1 + Math.min(v * 0.55, 0.22)})`;
+  }, 80);
+}
+
+// 브라우저 음성인식으로 말하는 즉시 표시 (지원 브라우저에서만)
 let rec = null;
 function startLiveStt() {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -131,46 +104,20 @@ function startLiveStt() {
   rec.onresult = (e) => {
     let txt = "";
     for (let i = e.resultIndex; i < e.results.length; i++) txt += e.results[i][0].transcript;
-    if (txt.trim()) showUserText(txt.trim(), true);
+    if (txt.trim() && myMode === "listening") showStt(txt.trim(), false);
   };
-  rec.onend = () => { if (conv) try { rec.start(); } catch(_){} }; // 세션 중엔 계속 재시작
+  rec.onend = () => { if (conv) try { rec.start(); } catch(_){} };
   try { rec.start(); } catch(_){}
 }
 function stopLiveStt() { if (rec) { rec.onend = null; try { rec.stop(); } catch(_){} rec = null; } }
 
-function show(stage) {
-  ["introStage","callStage","doneStage"].forEach(s => $(s).classList.toggle("hidden", s!==stage));
-  $("intro").classList.toggle("hidden", stage!=="introStage");
-}
-
-function setMode(mode) { // 'listening' | 'speaking'
-  myMode = mode;
-  $("orb").className = "orb " + mode;
-  $("status").textContent = mode === "speaking" ? "🗣 AI가 말하는 중이에요" : "🎧 듣고 있어요 — 편하게 말씀하세요";
-}
-
-function startMeter() {
-  meterTimer = setInterval(async () => {
-    if (!conv) return;
-    let v = 0;
-    try { v = conv.getInputVolume(); } catch(e) {}
-    if (v > 0.05) gotAnyAudio = true;
-
-    bars.forEach((b,i) => {
-      const t = (i+1)/bars.length;
-      b.style.height = (6 + Math.max(0, v*1.6 - t*0.3) * 90) + "px";
-      b.style.opacity = v*1.6 > t*0.3 ? .95 : .35;
-    });
-  }, 90);
-}
-
-$("startBtn").onclick = async () => {
-  $("errBox").classList.add("hidden");
+async function start() {
+  $("errText").classList.add("hidden");
   try {
     await navigator.mediaDevices.getUserMedia({ audio: true });
   } catch (e) {
-    $("errBox").textContent = "마이크 권한이 필요해요. 브라우저 주소창의 권한 설정에서 마이크를 허용한 뒤 다시 눌러주세요.";
-    $("errBox").classList.remove("hidden");
+    $("errText").textContent = "마이크 권한이 필요해요. 브라우저 설정에서 허용한 뒤 다시 탭해 주세요.";
+    $("errText").classList.remove("hidden");
     return;
   }
   show("callStage");
@@ -183,12 +130,8 @@ $("startBtn").onclick = async () => {
       onModeChange: ({ mode }) => setMode(mode),
       onMessage: ({ source, message }) => {
         console.log("[EVT]", source, message);
-        if (source === "ai") {
-          $("caption").textContent = message;
-          clearUserBubble(); // 새 질문이 시작되면 이전 답변은 지움
-        } else if (source === "user") {
-          showUserText(message, false);
-        }
+        if (source === "ai") { $("aiCaption").textContent = message; hideStt(); }
+        else if (source === "user") showStt(message, true);
       },
       onDisconnect: () => finish(),
       onError: (m) => console.warn("conv error:", m),
@@ -197,18 +140,18 @@ $("startBtn").onclick = async () => {
     startLiveStt();
   } catch (e) {
     show("introStage");
-    $("errBox").textContent = "연결에 실패했어요. 잠시 후 다시 시도해 주세요. (" + (e?.message || e) + ")";
-    $("errBox").classList.remove("hidden");
+    $("errText").textContent = "연결에 실패했어요. 잠시 후 다시 탭해 주세요.";
+    $("errText").classList.remove("hidden");
   }
-};
+}
 
-if (new URLSearchParams(location.search).get("auto") === "1") setTimeout(() => $("startBtn").click(), 600);
-
-$("endBtn").onclick = () => { if (conv) conv.endSession(); else finish(); };
+$("orbStart").onclick = start;
+if (new URLSearchParams(location.search).get("auto") === "1") setTimeout(start, 600);
 
 function finish() {
   stopLiveStt();
   clearInterval(meterTimer);
+  hideStt();
   conv = null;
   show("doneStage");
 }
