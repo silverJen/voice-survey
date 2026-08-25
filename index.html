@@ -57,9 +57,7 @@
 import { Conversation } from "https://cdn.jsdelivr.net/npm/@elevenlabs/client/+esm";
 
 const AGENT_ID = "agent_2301m0v1b7ghftjbvhw27j7fph3e";
-const qs = new URLSearchParams(location.search);
-const rid = qs.get("rid") || "direct";
-const uid = qs.get("uid") || "";
+const uid = new URLSearchParams(location.search).get("uid") || "direct";
 const $ = (id) => document.getElementById(id);
 
 let conv = null, meterTimer = null, sttFadeTimer = null, myMode = "listening";
@@ -128,7 +126,7 @@ async function start() {
     conv = await Conversation.startSession({
       agentId: AGENT_ID,
       connectionType: "websocket",
-      dynamicVariables: { rid, uid },
+      dynamicVariables: { uid },
       onModeChange: ({ mode }) => setMode(mode),
       onMessage: ({ source, message }) => {
         console.log("[EVT]", source, message);
