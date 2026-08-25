@@ -3,58 +3,164 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>음성 주문 만족도 설문</title>
+<title>채널카페 음성 주문 설문</title>
 <meta name="robots" content="noindex">
 <style>
-  :root { --brand:#5b5bd6; --bg:#f7f7fb; --text:#1a1a2e; --sub:#6b6b80; }
+  :root { --brand:#5b5bd6; --brand2:#8b8bf0; --bg:#f7f7fb; --text:#1a1a2e; --sub:#6b6b80; }
   * { margin:0; padding:0; box-sizing:border-box; }
   body { font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Pretendard",sans-serif;
          background:var(--bg); color:var(--text); min-height:100dvh;
          display:flex; flex-direction:column; align-items:center; padding:24px 20px; }
-  .card { width:100%; max-width:420px; }
-  h1 { font-size:22px; line-height:1.35; margin:28px 0 12px; }
-  p.desc { font-size:15px; line-height:1.6; color:var(--sub); margin-bottom:8px; }
-  ul.steps { list-style:none; margin:20px 0; }
-  ul.steps li { font-size:14.5px; line-height:1.5; padding:10px 0 10px 34px; position:relative; color:var(--text); }
-  ul.steps li::before { content:attr(data-n); position:absolute; left:0; top:8px; width:24px; height:24px;
+  .card { width:100%; max-width:420px; display:flex; flex-direction:column; min-height:calc(100dvh - 48px); }
+  h1 { font-size:22px; line-height:1.35; margin:20px 0 12px; }
+  p.desc { font-size:15px; line-height:1.6; color:var(--sub); }
+  ul.steps { list-style:none; margin:20px 0 8px; }
+  ul.steps li { font-size:14.5px; line-height:1.5; padding:9px 0 9px 34px; position:relative; }
+  ul.steps li::before { content:attr(data-n); position:absolute; left:0; top:7px; width:24px; height:24px;
      border-radius:50%; background:var(--brand); color:#fff; font-size:12.5px; font-weight:700;
      display:flex; align-items:center; justify-content:center; }
-  .hint { font-size:13px; color:var(--sub); background:#ececf6; border-radius:10px; padding:12px 14px; line-height:1.55; margin:16px 0 24px; }
-  .widget-wrap { width:100%; display:flex; justify-content:center; }
-  elevenlabs-convai { width:100%; }
-  footer { margin-top:auto; padding-top:32px; font-size:12px; color:#a0a0b2; }
+  .hint { font-size:13px; color:var(--sub); background:#ececf6; border-radius:10px; padding:12px 14px; line-height:1.55; margin:10px 0 20px; }
+
+  .stage { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:22px; }
+  .hidden { display:none !important; }
+
+  #startBtn { width:100%; max-width:320px; padding:20px 24px; border:none; border-radius:18px;
+     background:var(--brand); color:#fff; font-size:18px; font-weight:700; cursor:pointer;
+     box-shadow:0 6px 20px rgba(91,91,214,.35); }
+  #startBtn:active { transform:scale(.98); }
+
+  .orb { width:140px; height:140px; border-radius:50%;
+     background:radial-gradient(circle at 35% 30%, var(--brand2), var(--brand));
+     display:flex; align-items:center; justify-content:center; font-size:52px; color:#fff;
+     transition:transform .25s ease, box-shadow .25s ease; }
+  .orb.listening { animation:pulse 1.6s ease-in-out infinite; box-shadow:0 0 0 14px rgba(91,91,214,.12); }
+  .orb.speaking  { animation:none; box-shadow:0 0 0 8px rgba(91,91,214,.18); transform:scale(1.05); }
+  @keyframes pulse { 0%,100%{box-shadow:0 0 0 8px rgba(91,91,214,.10)} 50%{box-shadow:0 0 0 22px rgba(91,91,214,.04)} }
+
+  #status { font-size:17px; font-weight:700; }
+  #caption { font-size:14.5px; line-height:1.6; color:var(--sub); text-align:center; min-height:44px; max-width:340px; }
+
+  .meter { display:flex; gap:5px; align-items:flex-end; height:34px; }
+  .meter span { width:7px; height:6px; border-radius:4px; background:var(--brand); opacity:.35; transition:height .09s linear; }
+  .meter-label { font-size:12px; color:var(--sub); margin-top:2px; }
+
+  #endBtn { margin-top:6px; padding:12px 28px; border:1.5px solid #d4d4e2; border-radius:12px;
+     background:#fff; color:var(--sub); font-size:14.5px; cursor:pointer; }
+  .done-emoji { font-size:56px; }
+  #errBox { font-size:13.5px; color:#c0392b; background:#fdeaea; border-radius:10px; padding:12px 14px; line-height:1.55; }
+  footer { padding-top:20px; font-size:12px; color:#a0a0b2; text-align:center; }
 </style>
 </head>
 <body>
 <div class="card">
-  <h1>채널카페 음성 주문,<br>요즘 어떠세요? 🎙️</h1>
-  <p class="desc">채널카페 AI 전화 주문 경험에 대해 AI 상담원이 음성으로 딱 세 가지만 여쭤봅니다. 90초면 끝나요. 평소 말하듯 편하게 답해 주세요.</p>
-  <ul class="steps">
-    <li data-n="1">아래 <b>통화 시작</b> 버튼 누르기</li>
-    <li data-n="2">마이크 권한 <b>허용</b> 하기</li>
-    <li data-n="3">질문 3개에 말로 답하기 (약 90초)</li>
-  </ul>
-  <div class="hint">🔊 소리가 나오니 통화 가능한 환경에서 참여해 주세요. 답변은 채널카페 음성 주문 개선에만 사용됩니다.</div>
-  <div class="widget-wrap">
-    <elevenlabs-convai
-      agent-id="agent_2301m0v1b7ghftjbvhw27j7fph3e"
-      variant="expanded"
-      action-text="준비되셨으면 시작해 주세요"
-      start-call-text="통화 시작"
-      end-call-text="종료"
-      listening-text="듣고 있어요…"
-      speaking-text="말하는 중…"></elevenlabs-convai>
+  <!-- 시작 화면 -->
+  <div id="intro">
+    <h1>채널카페 음성 주문,<br>요즘 어떠세요? 🎙️</h1>
+    <p class="desc">채널카페 AI 전화 주문 경험에 대해 AI 상담원이 음성으로 딱 세 가지만 여쭤봅니다. 90초면 끝나요.</p>
+    <ul class="steps">
+      <li data-n="1">아래 버튼을 누르고 마이크 권한을 <b>허용</b></li>
+      <li data-n="2">AI 질문이 들리면 <b>말로 답하기</b></li>
+      <li data-n="3">질문 3개, 약 90초면 끝!</li>
+    </ul>
+    <div class="hint">🔊 소리가 나오니 통화 가능한 환경에서 참여해 주세요. 답변은 채널카페 음성 주문 개선에만 사용됩니다.</div>
   </div>
+  <div id="introStage" class="stage">
+    <button id="startBtn">🎤 설문 시작하기</button>
+    <div id="errBox" class="hidden"></div>
+  </div>
+
+  <!-- 통화 화면 -->
+  <div id="callStage" class="stage hidden">
+    <div id="orb" class="orb">🎙️</div>
+    <div id="status">연결 중…</div>
+    <div id="caption"></div>
+    <div>
+      <div class="meter" id="meter"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+      <div class="meter-label">내 목소리 인식 레벨</div>
+    </div>
+    <button id="endBtn">설문 그만하기</button>
+  </div>
+
+  <!-- 완료 화면 -->
+  <div id="doneStage" class="stage hidden">
+    <div class="done-emoji">🙏</div>
+    <div id="status2" style="font-size:18px;font-weight:700;">설문이 끝났어요. 감사합니다!</div>
+    <p class="desc" style="text-align:center;">남겨주신 의견은 채널카페 음성 주문 개선에 소중히 반영됩니다.<br>이제 창을 닫으셔도 됩니다.</p>
+  </div>
+
   <footer>Channel Cafe · Voice Order Survey</footer>
 </div>
-<script>
-  // ?rid= 응답자 식별자를 위젯 dynamic-variables로 전달 (트래킹 용도)
-  (function () {
-    var rid = new URLSearchParams(location.search).get("rid") || "direct";
-    var w = document.querySelector("elevenlabs-convai");
-    w.setAttribute("dynamic-variables", JSON.stringify({ rid: rid }));
-  })();
+
+<script type="module">
+import { Conversation } from "https://cdn.jsdelivr.net/npm/@elevenlabs/client/+esm";
+
+const AGENT_ID = "agent_2301m0v1b7ghftjbvhw27j7fph3e";
+const rid = new URLSearchParams(location.search).get("rid") || "direct";
+
+const $ = (id) => document.getElementById(id);
+const bars = [...document.querySelectorAll("#meter span")];
+let conv = null, meterTimer = null, gotAnyAudio = false;
+
+function show(stage) {
+  ["introStage","callStage","doneStage"].forEach(s => $(s).classList.toggle("hidden", s!==stage));
+  $("intro").classList.toggle("hidden", stage!=="introStage");
+}
+
+function setMode(mode) { // 'listening' | 'speaking'
+  $("orb").className = "orb " + mode;
+  $("status").textContent = mode === "speaking" ? "🗣 AI가 말하는 중이에요" : "🎧 듣고 있어요 — 편하게 말씀하세요";
+}
+
+function startMeter() {
+  meterTimer = setInterval(async () => {
+    if (!conv) return;
+    let v = 0;
+    try { v = conv.getInputVolume(); } catch(e) {}
+    if (v > 0.05) gotAnyAudio = true;
+    bars.forEach((b,i) => {
+      const t = (i+1)/bars.length;
+      b.style.height = (6 + Math.max(0, v*1.6 - t*0.3) * 90) + "px";
+      b.style.opacity = v*1.6 > t*0.3 ? .95 : .35;
+    });
+  }, 90);
+}
+
+$("startBtn").onclick = async () => {
+  $("errBox").classList.add("hidden");
+  try {
+    await navigator.mediaDevices.getUserMedia({ audio: true });
+  } catch (e) {
+    $("errBox").textContent = "마이크 권한이 필요해요. 브라우저 주소창의 권한 설정에서 마이크를 허용한 뒤 다시 눌러주세요.";
+    $("errBox").classList.remove("hidden");
+    return;
+  }
+  show("callStage");
+  setMode("listening");
+  try {
+    conv = await Conversation.startSession({
+      agentId: AGENT_ID,
+      connectionType: "websocket",
+      dynamicVariables: { rid },
+      onModeChange: ({ mode }) => setMode(mode),
+      onMessage: ({ source, message }) => { if (source === "ai") $("caption").textContent = message; },
+      onDisconnect: () => finish(),
+      onError: (m) => console.warn("conv error:", m),
+    });
+    startMeter();
+  } catch (e) {
+    show("introStage");
+    $("errBox").textContent = "연결에 실패했어요. 잠시 후 다시 시도해 주세요. (" + (e?.message || e) + ")";
+    $("errBox").classList.remove("hidden");
+  }
+};
+
+$("endBtn").onclick = () => { if (conv) conv.endSession(); else finish(); };
+
+function finish() {
+  clearInterval(meterTimer);
+  conv = null;
+  show("doneStage");
+}
 </script>
-<script src="https://unpkg.com/@elevenlabs/convai-widget-embed" async type="text/javascript"></script>
 </body>
 </html>
