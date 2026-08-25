@@ -73,8 +73,10 @@ function show(stage) {
 
 function setMode(mode) {
   myMode = mode;
+  voiceTicks = 0; quietTicks = 0;
   $("orb").classList.toggle("speaking", mode === "speaking");
-  if (mode === "speaking") { $("orb").style.transform = ""; $("orb").classList.remove("thinking"); }
+  $("orb").classList.remove("thinking");
+  if (mode === "speaking") $("orb").style.transform = "";
 }
 
 // 내 STT: 박스 없이 하단에 떴다가 사라짐
@@ -91,11 +93,27 @@ function hideStt() {
 }
 
 // 듣는 중엔 목소리 크기에 따라 오브가 반응
+let voiceTicks = 0, quietTicks = 0;
 function startMeter() {
   meterTimer = setInterval(() => {
     if (!conv || myMode !== "listening") return;
     let v = 0; try { v = conv.getInputVolume(); } catch(_){}
-    $("orb").style.transform = `scale(${1 + Math.min(v * 0.55, 0.22)})`;
+    const orb = $("orb");
+    if (v > 0.12) {
+      voiceTicks++; quietTicks = 0;
+      orb.classList.remove("thinking");
+      orb.style.transform = `scale(${1 + Math.min(v * 0.55, 0.22)})`;
+    } else {
+      quietTicks++;
+      // 말하다가 조용해지면 즉시 '생각 중'으로 전환 (인라인 transform이 애니메이션을 덮지 않게 제거)
+      if (voiceTicks >= 3 && quietTicks >= 5 && !orb.classList.contains("thinking")) {
+        voiceTicks = 0;
+        orb.style.transform = "";
+        orb.classList.add("thinking");
+      } else if (!orb.classList.contains("thinking")) {
+        orb.style.transform = "scale(1)";
+      }
+    }
   }, 80);
 }
 
@@ -137,7 +155,7 @@ async function start() {
       onMessage: ({ source, message }) => {
         console.log("[EVT]", source, message);
         if (source === "ai") { $("aiCaption").textContent = message; hideStt(); $("orb").classList.remove("thinking"); }
-        else if (source === "user") { showStt(message, true); $("orb").classList.add("thinking"); $("orb").style.transform = ""; }
+        else if (source === "user") { showStt(message, true); if (myMode === "listening") { $("orb").style.transform = ""; $("orb").classList.add("thinking"); } }
       },
       onDisconnect: () => finish(),
       onError: (m) => console.warn("conv error:", m),
