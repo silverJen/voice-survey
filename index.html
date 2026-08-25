@@ -43,6 +43,8 @@
   #userSaid .bubble { display:inline-block; background:var(--text); color:#fff; border-radius:14px;
      padding:8px 14px; font-size:14.5px; line-height:1.5; }
   #userSaid .label { display:block; font-size:11.5px; color:var(--sub); margin-bottom:4px; }
+  #userSaid .bubble { transition:opacity .5s ease; }
+  #userSaid.stale .bubble { opacity:.25; }
 
   .meter { display:flex; gap:5px; align-items:flex-end; height:34px; }
   .meter span { width:7px; height:6px; border-radius:4px; background:var(--brand); opacity:.35; transition:height .09s linear; }
@@ -148,10 +150,17 @@ $("startBtn").onclick = async () => {
       dynamicVariables: { rid },
       onModeChange: ({ mode }) => setMode(mode),
       onMessage: ({ source, message }) => {
-        if (source === "ai") $("caption").textContent = message;
-        else if (source === "user") $("userSaid").innerHTML =
-          '<span class="label">내 말이 이렇게 인식되고 있어요</span><span class="bubble"></span>',
-          $("userSaid").querySelector(".bubble").textContent = message;
+        console.log("[EVT]", source, message);
+        if (source === "ai") {
+          $("caption").textContent = message;
+          $("userSaid").classList.add("stale"); // 새 질문이 시작되면 이전 내 말은 흐리게
+        } else if (source === "user") {
+          const el = $("userSaid"), b = el.querySelector(".bubble");
+          if (b.textContent === message) return; // 같은 인식 결과 중복 표시 방지
+          el.classList.remove("stale");
+          b.style.opacity = "1";
+          b.textContent = message;
+        }
       },
       onDisconnect: () => finish(),
       onError: (m) => console.warn("conv error:", m),
@@ -163,6 +172,8 @@ $("startBtn").onclick = async () => {
     $("errBox").classList.remove("hidden");
   }
 };
+
+if (new URLSearchParams(location.search).get("auto") === "1") setTimeout(() => $("startBtn").click(), 600);
 
 $("endBtn").onclick = () => { if (conv) conv.endSession(); else finish(); };
 
