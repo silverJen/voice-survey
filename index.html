@@ -36,6 +36,8 @@
      text-align:center; font-size:19px; line-height:1.55; font-weight:600; color:#1a1a2e;
      opacity:0; transition:opacity .35s ease; }
   #sttText.show { opacity:1; }
+  #sttText.interim { font-size:16px; font-weight:400; color:rgba(26,26,46,.45); }
+  #sttText.interim::before { content:"듣는 중 · "; font-size:12.5px; color:rgba(26,26,46,.35); }
   #errText { font-size:14px; color:#ff8a80; text-align:center; max-width:320px; line-height:1.5; }
   #thinkDots { font-size:26px; letter-spacing:5px; color:rgba(26,26,46,.45); height:20px; line-height:20px;
      opacity:0; transition:opacity .25s ease; }
@@ -95,6 +97,7 @@ function showStt(text, final) {
   clearTimeout(sttFadeTimer);
   const el = $("sttText");
   el.textContent = text;
+  el.classList.toggle("interim", !final);
   el.classList.add("show");
   if (final) sttFadeTimer = setTimeout(() => el.classList.remove("show"), 2000);
 }
