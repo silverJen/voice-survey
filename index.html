@@ -37,6 +37,10 @@
      opacity:0; transition:opacity .35s ease; }
   #sttText.show { opacity:1; }
   #errText { font-size:14px; color:#ff8a80; text-align:center; max-width:320px; line-height:1.5; }
+  #thinkDots { font-size:26px; letter-spacing:5px; color:rgba(26,26,46,.45); height:20px; line-height:20px;
+     opacity:0; transition:opacity .25s ease; }
+  #thinkDots.on { opacity:1; animation:dots 1.2s ease-in-out infinite; }
+  @keyframes dots { 0%,100% { opacity:.35; } 50% { opacity:.9; } }
   #doneText { font-size:20px; font-weight:600; text-align:center; line-height:1.7; }
 </style>
 </head>
@@ -49,6 +53,7 @@
 
   <div id="callStage" class="stage hidden">
     <div id="orb" class="orb"></div>
+    <div id="thinkDots">···</div>
     <div id="aiCaption"></div>
   </div>
 
@@ -66,6 +71,11 @@ const uid = new URLSearchParams(location.search).get("uid") || "direct";
 const $ = (id) => document.getElementById(id);
 
 let conv = null, meterTimer = null, sttFadeTimer = null, myMode = "listening";
+function setThinking(on) {
+  $("orb").classList.toggle("thinking", on);
+  $("thinkDots").classList.toggle("on", on);
+  if (on) $("orb").style.transform = "";
+}
 
 function show(stage) {
   ["introStage","callStage","doneStage"].forEach(s => $(s).classList.toggle("hidden", s!==stage));
@@ -75,8 +85,9 @@ function setMode(mode) {
   myMode = mode;
   voiceTicks = 0; quietTicks = 0;
   $("orb").classList.toggle("speaking", mode === "speaking");
-  $("orb").classList.remove("thinking");
-  if (mode === "speaking") $("orb").style.transform = "";
+  setThinking(false);
+  if (mode === "speaking") { $("orb").style.transform = ""; pauseLiveStt(); }
+  else resumeLiveStt();
 }
 
 // 내 STT: 박스 없이 하단에 떴다가 사라짐
@@ -101,15 +112,14 @@ function startMeter() {
     const orb = $("orb");
     if (v > 0.12) {
       voiceTicks++; quietTicks = 0;
-      orb.classList.remove("thinking");
+      setThinking(false);
       orb.style.transform = `scale(${1 + Math.min(v * 0.55, 0.22)})`;
     } else {
       quietTicks++;
       // 말하다가 조용해지면 즉시 '생각 중'으로 전환 (인라인 transform이 애니메이션을 덮지 않게 제거)
       if (voiceTicks >= 3 && quietTicks >= 5 && !orb.classList.contains("thinking")) {
         voiceTicks = 0;
-        orb.style.transform = "";
-        orb.classList.add("thinking");
+        setThinking(true);
       } else if (!orb.classList.contains("thinking")) {
         orb.style.transform = "scale(1)";
       }
@@ -129,10 +139,12 @@ function startLiveStt() {
     for (let i = e.resultIndex; i < e.results.length; i++) txt += e.results[i][0].transcript;
     if (txt.trim() && myMode === "listening") showStt(txt.trim(), false);
   };
-  rec.onend = () => { if (conv) try { rec.start(); } catch(_){} };
+  rec.onend = () => { if (conv && myMode === "listening") try { rec.start(); } catch(_){} };
   try { rec.start(); } catch(_){}
 }
-function stopLiveStt() { if (rec) { rec.onend = null; try { rec.stop(); } catch(_){} rec = null; } }
+function pauseLiveStt() { if (rec) try { rec.abort(); } catch(_){} }
+function resumeLiveStt() { if (rec && conv) try { rec.start(); } catch(_){} }
+function stopLiveStt() { if (rec) { rec.onend = null; try { rec.abort(); } catch(_){} rec = null; } }
 
 async function start() {
   $("errText").classList.add("hidden");
