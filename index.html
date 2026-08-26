@@ -69,7 +69,8 @@
 import { Conversation } from "https://cdn.jsdelivr.net/npm/@elevenlabs/client/+esm";
 
 const AGENT_ID = "agent_2301m0v1b7ghftjbvhw27j7fph3e";
-const uid = new URLSearchParams(location.search).get("uid") || "direct";
+const qs = new URLSearchParams(location.search);
+const uid = qs.get("uid") || qs.get("name") || qs.get("rid") || qs.get("id") || "direct";
 const $ = (id) => document.getElementById(id);
 
 let conv = null, meterTimer = null, sttFadeTimer = null, myMode = "listening";
