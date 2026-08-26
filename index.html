@@ -73,30 +73,26 @@ const uid = new URLSearchParams(location.search).get("uid") || "direct";
 const $ = (id) => document.getElementById(id);
 
 let conv = null, meterTimer = null, sttFadeTimer = null, myMode = "listening";
-let ac = null, thinkTimer = null, noiseBuf = null;
-function keyClick() {
-  // 키보드 타건음: 짧은 노이즈 버스트 (키마다 톤·세기 랜덤)
+let ac = null, thinkTimer = null, tockAlt = false;
+function tock() {
+  // 또각또각: 우드블록풍 타격음 (높은음/낮은음 교대)
   try {
     if (!ac) ac = new (window.AudioContext || window.webkitAudioContext)();
-    if (!noiseBuf) {
-      noiseBuf = ac.createBuffer(1, ac.sampleRate * 0.05, ac.sampleRate);
-      const d = noiseBuf.getChannelData(0);
-      for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 2);
-    }
-    const src = ac.createBufferSource(); src.buffer = noiseBuf;
-    const bp = ac.createBiquadFilter(); bp.type = "bandpass";
-    bp.frequency.value = 1800 + Math.random() * 1600; bp.Q.value = 1.2;
-    const g = ac.createGain();
-    g.gain.value = 0.05 + Math.random() * 0.04;
-    src.connect(bp); bp.connect(g); g.connect(ac.destination);
-    src.start();
+    const t = ac.currentTime;
+    const o = ac.createOscillator(), g = ac.createGain();
+    const f = tockAlt ? 880 : 1150; tockAlt = !tockAlt;
+    o.type = "sine";
+    o.frequency.setValueAtTime(f, t);
+    o.frequency.exponentialRampToValueAtTime(f * 0.55, t + 0.055);
+    g.gain.setValueAtTime(0.09, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.11);
+    o.connect(g); g.connect(ac.destination);
+    o.start(t); o.stop(t + 0.12);
   } catch(_){}
 }
 function typeLoop() {
-  keyClick();
-  // 타이핑 리듬: 80~200ms 랜덤 간격, 가끔 잠깐 쉼
-  const next = Math.random() < 0.15 ? 300 + Math.random() * 250 : 80 + Math.random() * 120;
-  thinkTimer = setTimeout(typeLoop, next);
+  tock();
+  thinkTimer = setTimeout(typeLoop, 420);
 }
 function setThinking(on) {
   $("orb").classList.toggle("thinking", on);
