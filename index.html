@@ -36,6 +36,8 @@
      text-align:center; font-size:19px; line-height:1.55; font-weight:600; color:#1a1a2e;
      opacity:0; transition:opacity .35s ease; }
   #sttText.show { opacity:1; }
+  #sttText.interim { font-size:15.5px; font-weight:400; color:rgba(26,26,46,.45); }
+  #sttText.interim::before { content:"듣는 중 · "; font-size:12px; color:rgba(26,26,46,.35); }
   #errText { font-size:14px; color:#ff8a80; text-align:center; max-width:320px; line-height:1.5; }
   #thinkDots { font-size:34px; letter-spacing:7px; color:#5b5bd6; height:24px; line-height:24px;
      opacity:0; transition:opacity .25s ease; }
@@ -113,16 +115,18 @@ function setMode(mode) {
   voiceTicks = 0; quietTicks = 0;
   $("orb").classList.toggle("speaking", mode === "speaking");
   setThinking(false);
-  if (mode === "speaking") $("orb").style.transform = "";
+  if (mode === "speaking") { $("orb").style.transform = ""; pauseLiveStt(); }
+  else resumeLiveStt();
 }
 
 // 내 STT: 박스 없이 하단에 떴다가 사라짐
-function showStt(text) {
+function showStt(text, final) {
   clearTimeout(sttFadeTimer);
   const el = $("sttText");
   el.textContent = text;
+  el.classList.toggle("interim", !final);
   el.classList.add("show");
-  sttFadeTimer = setTimeout(() => el.classList.remove("show"), 3000);
+  if (final) sttFadeTimer = setTimeout(() => el.classList.remove("show"), 1200);
 }
 function hideStt() {
   clearTimeout(sttFadeTimer);
@@ -153,6 +157,25 @@ function startMeter() {
   }, 80);
 }
 
+// 말하는 동안 잠정 자막 (AI가 말할 땐 완전 중단해 AI 목소리가 잡히지 않게)
+let rec = null;
+function startLiveStt() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) return;
+  rec = new SR();
+  rec.lang = "ko-KR"; rec.continuous = true; rec.interimResults = true;
+  rec.onresult = (e) => {
+    let txt = "";
+    for (let i = e.resultIndex; i < e.results.length; i++) txt += e.results[i][0].transcript;
+    if (txt.trim() && myMode === "listening") showStt(txt.trim(), false);
+  };
+  rec.onend = () => { if (conv && myMode === "listening") try { rec.start(); } catch(_){} };
+  try { rec.start(); } catch(_){}
+}
+function pauseLiveStt() { if (rec) try { rec.abort(); } catch(_){} }
+function resumeLiveStt() { if (rec && conv) try { rec.start(); } catch(_){} }
+function stopLiveStt() { if (rec) { rec.onend = null; try { rec.abort(); } catch(_){} rec = null; } }
+
 async function start() {
   $("errText").classList.add("hidden");
   try {
@@ -174,7 +197,7 @@ async function start() {
       onMessage: ({ source, message }) => {
         console.log("[EVT]", source, message);
         if (source === "ai") { $("aiCaption").textContent = message; hideStt(); $("orb").classList.remove("thinking"); }
-        else if (source === "user") { showStt(message); if (myMode === "listening") setThinking(true); }
+        else if (source === "user") { showStt(message, true); if (myMode === "listening") setThinking(true); }
       },
       onDisconnect: () => finish(),
       onError: (m) => console.warn("conv error:", m),
@@ -187,6 +210,7 @@ async function start() {
       conv = await Conversation.startSession(opts("websocket"));
     }
     startMeter();
+    startLiveStt();
   } catch (e) {
     show("introStage");
     $("errText").textContent = "연결에 실패했어요. 잠시 후 다시 탭해 주세요.";
@@ -198,6 +222,7 @@ $("orbStart").onclick = start;
 if (new URLSearchParams(location.search).get("auto") === "1") setTimeout(start, 600);
 
 function finish() {
+  stopLiveStt();
   clearInterval(meterTimer);
   hideStt();
   conv = null;
